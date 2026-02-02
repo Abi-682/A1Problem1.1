@@ -5,6 +5,63 @@ from warehouse_env import WarehouseEnv
 Action = Union[int, str]
 
 
+class WarehouseAgentReflex:
+    """
+    Simple stateless reflex agent matching the exercise API.
+
+    Provides an `act(state)` method that accepts the environment observation
+    dictionary (keys used: 'robot_pos', 'has_item', 'pickup_pos', 'dropoff_pos',
+    optionally 'valid_actions'). Falls back to random valid action.
+    """
+    def __init__(self):
+        pass
+
+    def act(self, state: Dict[str, object]) -> Action:
+        pos = state.get('robot_pos')
+        carrying = bool(state.get('has_item'))
+        pickup = state.get('pickup_pos')
+        dropoff = state.get('dropoff_pos')
+
+        # Determine valid actions if provided, otherwise assume full set
+        if 'valid_actions' in state and isinstance(state['valid_actions'], (list, tuple)):
+            valid_actions = list(state['valid_actions'])
+        else:
+            valid_actions = ['N', 'E', 'S', 'W', 'WAIT', 'PICK', 'DROP']
+
+        # Rule 1: At pickup and not carrying -> PICK
+        if pos == pickup and not carrying and 'PICK' in valid_actions:
+            return 'PICK'
+
+        # Rule 2: At dropoff and carrying -> DROP
+        if pos == dropoff and carrying and 'DROP' in valid_actions:
+            return 'DROP'
+
+        # Rule 3: Carrying -> move toward dropoff
+        if carrying and dropoff:
+            if dropoff[0] < pos[0] and 'N' in valid_actions:
+                return 'N'
+            if dropoff[0] > pos[0] and 'S' in valid_actions:
+                return 'S'
+            if dropoff[1] < pos[1] and 'W' in valid_actions:
+                return 'W'
+            if dropoff[1] > pos[1] and 'E' in valid_actions:
+                return 'E'
+
+        # Rule 4: Not carrying -> move toward pickup
+        if (not carrying) and pickup:
+            if pickup[0] < pos[0] and 'N' in valid_actions:
+                return 'N'
+            if pickup[0] > pos[0] and 'S' in valid_actions:
+                return 'S'
+            if pickup[1] < pos[1] and 'W' in valid_actions:
+                return 'W'
+            if pickup[1] > pos[1] and 'E' in valid_actions:
+                return 'E'
+
+        # Fallback: random valid action
+        return random.choice(valid_actions)
+
+
 class ReflexAgent:
     """
     A simple reflex agent for the warehouse environment.
